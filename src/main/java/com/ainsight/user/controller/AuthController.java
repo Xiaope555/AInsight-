@@ -1,6 +1,8 @@
 package com.ainsight.user.controller;
 
 import com.ainsight.common.result.Result;
+import com.ainsight.infra.ratelimit.LimitTarget;
+import com.ainsight.infra.ratelimit.RateLimit;
 import com.ainsight.user.dto.LoginRequest;
 import com.ainsight.user.dto.LoginResponse;
 import com.ainsight.user.dto.RegisterRequest;
@@ -32,6 +34,8 @@ public class AuthController {
     }
 
     @Operation(summary = "登录", description = "成功返回 JWT,后续请求带 Authorization: Bearer <token>")
+    // 未登录场景按 IP 限流:每分钟最多 5 次,给暴力破解加一道闸
+    @RateLimit(key = "login", target = LimitTarget.IP, windowSeconds = 60, maxCount = 5)
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return Result.ok(userService.login(request));

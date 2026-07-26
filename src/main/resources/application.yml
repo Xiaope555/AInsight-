@@ -7,6 +7,11 @@ spring:
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
+  servlet:
+    multipart:
+      # default is only 1MB — too small for knowledge base documents
+      max-file-size: 10MB
+      max-request-size: 10MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     # allowPublicKeyRetrieval=true: required by MySQL 8.4 caching_sha2_password auth without SSL
@@ -45,6 +50,16 @@ ainsight:
     timeout-seconds: 60
     temperature: 0.7
     agent-temperature: 0.2   # tool calling needs precision, not creativity
+  rag:
+    chunk-size: 500          # chars per chunk
+    chunk-overlap: 100       # overlap between neighbouring chunks
+    top-k: 3                 # retrieve top K chunks
+    min-score: 0.35          # drop hits below this cosine similarity
+    embedding-batch-size: 10 # texts per embedding API call (Bailian limit)
+  chat:
+    context-max-messages: 20 # hot context kept in Redis (= 10 rounds)
+    context-ttl-minutes: 120
+    sse-timeout-minutes: 5
 
 # ---- API docs ----
 springdoc:
