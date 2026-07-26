@@ -1,0 +1,32 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: ainsight-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ainsight123
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      # named volume: data survives container recreation
+      - mysql-data:/var/lib/mysql
+      # runs ONLY on first boot (when the data dir is empty)
+      - ./docs/ainsight-schema.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+
+  redis:
+    image: redis:7
+    container_name: ainsight-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+
+volumes:
+  mysql-data:
+  redis-data:

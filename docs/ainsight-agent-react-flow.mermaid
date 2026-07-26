@@ -1,0 +1,33 @@
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant C as ChatController
+    participant A as AgentExecutor
+    participant R as Redis
+    participant L as 大模型 API
+    participant T as 工具层
+    participant M as MySQL
+
+    U->>C: "帮我查订单 20260726001 的状态,再看看能不能退货"
+    C->>A: execute(userId, convId, question)
+    A->>R: 读取最近 N 条会话上下文
+    R-->>A: 历史消息列表
+    Note over A,L: 第 1 轮 —— 模型决定先查订单
+    A->>L: messages + tools(工具 JSON Schema 列表)
+    L-->>A: tool_calls: query_order(orderNo=20260726001)
+    A->>T: 执行 OrderQueryTool
+    T->>M: SELECT ... FROM biz_order WHERE order_no=?
+    M-->>T: 订单数据
+    T-->>A: 结果 JSON,追加为 role=tool 消息
+    Note over A,L: 第 2 轮 —— 模型决定再查知识库
+    A->>L: messages(已含订单结果)+ tools
+    L-->>A: tool_calls: search_knowledge(query=退货政策)
+    A->>T: 执行 KbSearchTool(向量化 query → 余弦 TopK)
+    T-->>A: 相关文档片段,追加为 role=tool 消息
+    Note over A,L: 第 3 轮 —— 信息足够,不再调工具
+    A->>L: messages(已含知识库结果)+ tools
+    L-->>A: 最终回答(流式 delta 逐段返回)
+    A-->>C: 逐段推送
+    C-->>U: SSE 打字机式输出
+    A->>M: 持久化全部消息 + 工具调用日志
+    A->>R: 回写最新上下文(带 TTL)

@@ -1,0 +1,69 @@
+flowchart TB
+    FE["前端 / Knife4j 调试页 / curl"]
+
+    subgraph APP["AInsight 单体应用 · Spring Boot 3 + Java 17"]
+        direction TB
+
+        subgraph CROSS["横切能力(所有请求先经过)"]
+            direction LR
+            SEC["JWT 认证过滤器<br/>Spring Security"]
+            RL["接口限流<br/>Redis + AOP"]
+            EXH["全局异常处理<br/>统一响应 Result&lt;T&gt;"]
+        end
+
+        subgraph CTRL["Controller 层"]
+            direction LR
+            UC["UserController<br/>注册 / 登录"]
+            KC["KnowledgeController<br/>文档上传 / 检索"]
+            CC["ChatController<br/>对话 · SSE 流式"]
+        end
+
+        subgraph SVC["Service 层"]
+            direction LR
+            US["UserService"]
+            KS["KnowledgeService<br/>解析→切分→向量化"]
+            CS["ConversationService<br/>会话 / 历史"]
+        end
+
+        subgraph AGENT["Agent 核心引擎"]
+            direction LR
+            AE["AgentExecutor<br/>ReAct 多轮工具调用循环"]
+            TR["ToolRegistry<br/>工具注册中心"]
+            LC["LlmClient<br/>OpenAI 兼容协议"]
+        end
+
+        subgraph TOOLS["可插拔工具集"]
+            direction LR
+            T1["OrderQueryTool<br/>查业务库订单"]
+            T2["KbSearchTool<br/>RAG 语义检索"]
+            T3["WeatherTool<br/>调外部 API"]
+        end
+    end
+
+    MYSQL[("MySQL 8<br/>用户 / 会话 / 消息 / 文档<br/>切片 / 订单 / 工具日志")]
+    REDIS[("Redis<br/>会话上下文 · 限流计数<br/>Token 黑名单")]
+    LLMAPI["通义千问-百炼<br/>chat/completions + embeddings<br/>(OpenAI 兼容)"]
+    EXTAPI["第三方 API<br/>天气 / 汇率"]
+
+    FE -->|"HTTP / SSE"| CROSS
+    CROSS --> CTRL
+    UC --> US
+    KC --> KS
+    CC --> CS
+    CC --> AE
+    AE <--> TR
+    TR --> T1
+    TR --> T2
+    TR --> T3
+    AE <--> LC
+    LC --> LLMAPI
+    KS --> LC
+    T1 --> MYSQL
+    T2 --> KS
+    T3 --> EXTAPI
+    US --> MYSQL
+    CS --> MYSQL
+    CS --> REDIS
+    KS --> MYSQL
+    RL --> REDIS
+    SEC --> REDIS
